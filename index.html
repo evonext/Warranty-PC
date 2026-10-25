@@ -97,9 +97,7 @@
   .list { display: grid; gap: 10px; }
   .item {
     background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px;
-    animation: rise .35s ease both;
   }
-  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .cat { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
   .name { font-weight: 700; font-size: 16px; margin-top: 3px; line-height: 1.3; }
@@ -109,7 +107,7 @@
   .over { background: var(--bad-soft);  color: var(--bad); }
 
   .bar { height: 6px; background: var(--track); border-radius: 99px; overflow: hidden; margin: 14px 0 10px; }
-  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--accent); transform-origin: left; }
   .bar i.soon { background: var(--warn); }
   .bar i.over { background: var(--bad); }
   .meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); gap: 10px; flex-wrap: wrap; }
@@ -129,21 +127,89 @@
     .head > div:last-child { grid-column: 1 / -1; }
     button { padding: 0 16px; }
   }
+
+  /* ===== Motion ===== */
+  :root { --ease-out: cubic-bezier(.16, 1, .3, 1); --ease-io: cubic-bezier(.65, 0, .35, 1); }
+
+  /* Интро: щит-пломба */
+  #intro { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg); }
+  #intro .seal { width: 112px; height: 112px; border-radius: 30px; display: grid; place-items: center; background: var(--accent);
+                 transform: scale(.6); opacity: 0; }
+  #intro svg { width: 58px; height: 58px; color: #fff; overflow: visible; }
+  #intro .outline { stroke-dasharray: 64; stroke-dashoffset: 64; }
+  #intro .tick { stroke-dasharray: 14; stroke-dashoffset: 14; }
+  #intro .ring { position: absolute; width: 112px; height: 112px; border-radius: 30px; border: 2px solid var(--accent); opacity: 0; }
+
+  /* Проявление контента после интро */
+  .rv { opacity: 0; }
+  body.ready .rv { animation: rv .9s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+  @keyframes rv { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  h1 .ln { display: block; overflow: hidden; padding-bottom: .06em; }
+  h1 .ln > span { display: block; transform: translateY(105%); }
+  body.ready h1 .ln > span { animation: up 1s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+  @keyframes up { to { transform: none; } }
+  .brand .shield { opacity: 0; }
+  body.landed .brand .shield { opacity: 1; }
+
+  /* Кнопка в процессе */
+  button[type=submit] { position: relative; min-width: 128px; transition: background .2s; }
+  button[type=submit].busy { color: transparent; pointer-events: none; }
+  button[type=submit].busy::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px;
+    border-radius: 50%; border: 2.5px solid var(--bg); border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Скелетон + сканирующая линия */
+  .skel { position: relative; display: grid; gap: 10px; overflow: hidden; border-radius: 18px; }
+  .skel div { height: 92px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); }
+  .skel div:first-child { height: 74px; }
+  .skel::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 90px;
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--accent) 18%, transparent) 70%, var(--accent) 100%);
+    border-bottom: 2px solid var(--accent); animation: scan 1s var(--ease-io) infinite; }
+  @keyframes scan { from { transform: translateY(-100%); } to { transform: translateY(420px); } }
+  .skel.out { animation: fadeout .25s ease forwards; }
+  @keyframes fadeout { to { opacity: 0; transform: scale(.985); } }
+
+  /* Каскад результатов */
+  .seq { opacity: 0; transform: translateY(26px) scale(.97); filter: blur(6px); }
+  .seq.on { opacity: 1; transform: none; filter: none;
+            transition: opacity .6s var(--ease-out), transform .8s var(--ease-out), filter .6s var(--ease-out); }
+  .bar i { transition: width 1.1s var(--ease-out); }
+  .badge { transition: transform .4s var(--ease-out); }
+  .seq:not(.on) .badge { transform: scale(.6); }
+  .shake { animation: shake .45s var(--ease-io); }
+  @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    #intro { display: none; }
+    .rv, .seq, .brand .shield { opacity: 1 !important; transform: none !important; filter: none !important; animation: none !important; transition: none !important; }
+    h1 .ln > span { transform: none !important; animation: none !important; }
+    .bar i { transition: none; }
+    .skel::after { animation: none; }
+  }
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true">
+  <div class="ring"></div>
+  <div class="seal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path class="outline" pathLength="64" d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/>
+      <path class="tick" pathLength="14" d="M8.5 12l2.5 2.5 4.5-5"/>
+    </svg>
+  </div>
+</div>
 <div class="wrap">
   <div class="brand">
     <div class="shield">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
     </div>
-    <div><b>Электронная гарантия</b><span>Сборка ПК</span></div>
+    <div class="rv" style="--d:0ms"><b>Электронная гарантия</b><span>Сборка ПК</span></div>
   </div>
 
-  <h1>Проверка гарантии</h1>
-  <p class="lead">Введите номер заказа, чтобы увидеть сроки гарантии на комплектующие.</p>
+  <h1><span class="ln"><span style="--d:80ms">Проверка</span></span><span class="ln"><span style="--d:170ms">гарантии</span></span></h1>
+  <p class="lead rv" style="--d:300ms">Введите номер заказа, чтобы увидеть сроки гарантии на комплектующие.</p>
 
-  <form id="f" autocomplete="off">
+  <form id="f" class="rv" style="--d:400ms" autocomplete="off">
     <label class="field"><span>№</span>
       <input id="q" inputmode="numeric" placeholder="0001" maxlength="12" aria-label="Номер заказа">
     </label>
@@ -153,7 +219,7 @@
 
   <div id="result"></div>
 
-  <footer>Гарантийный срок отсчитывается с даты покупки. Сохраняйте номер заказа.</footer>
+  <footer class="rv" style="--d:520ms">Гарантийный срок отсчитывается с даты покупки. Сохраняйте номер заказа.</footer>
 </div>
 
 <script>
@@ -267,16 +333,16 @@ function render(key) {
   const minEnd = items.find(i => i.left > 0);
 
   res.innerHTML = `
-    <div class="head">
+    <div class="head seq">
       <div><small>Заказ</small><strong class="mono">№${esc(key)}</strong></div>
       <div><small>Дата покупки</small><strong>${fmt(start)}</strong></div>
       <div><small>Покупатель</small><strong>${esc(order.customer)}</strong></div>
     </div>
-    <div class="summary">
+    <div class="summary seq">
       <span class="pill">На гарантии: ${active} из ${items.length}</span>
       ${minEnd ? `<span class="pill">Ближайшее окончание: ${fmt(minEnd.end)}</span>` : ""}
     </div>
-    ${active ? `<button type="button" class="calall" id="icsBtn">
+    ${active ? `<button type="button" class="calall seq" id="icsBtn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18M12 13v5M9.5 15.5h5"/></svg>
       Добавить все сроки в календарь <small>(.ics)</small></button>` : ""}
     <div class="list">
@@ -284,15 +350,15 @@ function render(key) {
         const lt = leftText(now, it.end);
         const badge = it.state === "over" ? "Истекла" : `${it.left} ${plural(it.left, "день", "дня", "дней")}`;
         return `
-        <div class="item" style="animation-delay:${i * 40}ms">
+        <div class="item seq">
           <div class="row">
             <div>
               <div class="cat">${esc(it.cat)}</div>
               <div class="name">${esc(it.name)}</div>
             </div>
-            <span class="badge ${it.state}">${badge}</span>
+            <span class="badge ${it.state}" ${it.left > 0 ? `data-n="${it.left}"` : ""}>${badge}</span>
           </div>
-          <div class="bar"><i class="${it.state}" style="width:${it.pct.toFixed(1)}%"></i></div>
+          <div class="bar"><i class="${it.state}" data-w="${it.pct.toFixed(1)}"></i></div>
           <div class="meta">
             <span>Гарантия до <b>${fmt(it.end)}</b></span>
             <span>${lt ? "Осталось: <b>" + lt + "</b>" : "Срок гарантии истёк"}</span>
@@ -305,6 +371,78 @@ function render(key) {
     </div>`;
   const btn = document.getElementById("icsBtn");
   if (btn) btn.onclick = () => downloadIcs(key, items);
+  play(res);
+}
+
+// ===== Motion =====
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Каскад: блоки по очереди, полоски заполняются, дни отсчитываются
+function play(root) {
+  const els = [...root.querySelectorAll(".seq")];
+  els.forEach((el, i) => {
+    const delay = calm ? 0 : i * 75;
+    setTimeout(() => {
+      el.classList.add("on");
+      const bar = el.querySelector(".bar i");
+      if (bar) setTimeout(() => bar.style.width = bar.dataset.w + "%", calm ? 0 : 180);
+      const b = el.querySelector(".badge[data-n]");
+      if (b) countUp(b, +b.dataset.n, calm ? 0 : 1100);
+    }, delay);
+  });
+}
+
+function countUp(el, n, ms) {
+  const word = () => " " + plural(n, "день", "дня", "дней");
+  if (!ms) { el.textContent = n + word(); return; }
+  const t0 = performance.now();
+  const tick = t => {
+    const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 4);
+    el.textContent = Math.round(n * e) + word();
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// Проверка с эффектом сканирования
+const btnGo = document.querySelector("button[type=submit]");
+function check(key) {
+  const res = document.getElementById("result");
+  if (!ORDERS[key] || calm) {
+    render(key);
+    if (!ORDERS[key] && !calm) { const f = document.querySelector(".field"); f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake"); }
+    return;
+  }
+  btnGo.classList.add("busy");
+  res.innerHTML = `<div class="skel"><div></div><div></div><div></div><div></div></div>`;
+  setTimeout(() => {
+    res.firstElementChild.classList.add("out");
+    setTimeout(() => { btnGo.classList.remove("busy"); render(key); }, 240);
+  }, 900);
+}
+
+// Интро: щит рисуется и перелетает в шапку
+function intro(done) {
+  const box = document.getElementById("intro");
+  if (calm || !box.animate) { box.remove(); document.body.classList.add("landed"); done(); return; }
+  const seal = box.querySelector(".seal"), ring = box.querySelector(".ring");
+  const E = "cubic-bezier(.16,1,.3,1)";
+  seal.animate([{ transform: "scale(.6)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 500, easing: E, fill: "forwards" });
+  box.querySelector(".outline").animate([{ strokeDashoffset: 64 }, { strokeDashoffset: 0 }], { duration: 700, delay: 150, easing: "cubic-bezier(.65,0,.35,1)", fill: "forwards" });
+  box.querySelector(".tick").animate([{ strokeDashoffset: 14 }, { strokeDashoffset: 0 }], { duration: 320, delay: 780, easing: E, fill: "forwards" });
+  ring.animate([{ transform: "scale(1)", opacity: .7 }, { transform: "scale(1.9)", opacity: 0 }], { duration: 700, delay: 1000, easing: "ease-out" });
+
+  setTimeout(() => {
+    const from = seal.getBoundingClientRect(), to = document.querySelector(".brand .shield").getBoundingClientRect();
+    const dx = (to.left + to.width / 2) - (from.left + from.width / 2), dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+    const k = to.width / from.width;
+    seal.animate([{ transform: "none", borderRadius: "30px" }, { transform: `translate(${dx}px, ${dy}px) scale(${k})`, borderRadius: "30px" }],
+                 { duration: 750, easing: "cubic-bezier(.7,0,.2,1)", fill: "forwards" });
+    box.animate([{ backgroundColor: getComputedStyle(box).backgroundColor }, { backgroundColor: "transparent" }],
+                { duration: 600, delay: 250, easing: "ease-out", fill: "forwards" });
+    setTimeout(done, 380);
+    setTimeout(() => { document.body.classList.add("landed"); box.remove(); }, 760);
+  }, 1250);
 }
 
 const q = document.getElementById("q");
@@ -313,11 +451,14 @@ document.getElementById("f").addEventListener("submit", e => {
   const key = q.value.trim().replace(/\D/g, "").padStart(4, "0");
   q.value = q.value.trim() ? key : "";
   history.replaceState(null, "", key && q.value ? "?order=" + key : location.pathname);
-  render(q.value ? key : "");
+  check(q.value ? key : "");
 });
 
 const initial = new URLSearchParams(location.search).get("order");
-if (initial) { q.value = initial; render(initial.replace(/\D/g, "").padStart(4, "0")); }
+intro(() => {
+  document.body.classList.add("ready");
+  if (initial) { q.value = initial; setTimeout(() => check(initial.replace(/\D/g, "").padStart(4, "0")), 450); }
+});
 </script>
 </body>
 </html>
